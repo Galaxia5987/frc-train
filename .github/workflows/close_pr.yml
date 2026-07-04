@@ -90,7 +90,7 @@ jobs:
 
           if [ "$BLOCKING_CHECKS" -eq 0 ]; then
             echo "The 'build' workflow is successful (or not present)! Closing the PR without merging."
-            
+            gh pr edit $PR_NUMBER -R ${{github.repository}} --title "Task Completed"
             gh pr close $PR_NUMBER -R ${{ github.repository }} \
               --comment "Congratulations! You completed this task successfully."
           else
