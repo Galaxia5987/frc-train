@@ -67,7 +67,7 @@ jobs:
               --repo ${{ github.repository }} \
               --base tasks/main \
               --head "$clean_branch_name" \
-              --title "Task $clean_branch_name" \
+              --title "Incomplete Task $clean_branch_name" \
               --body "$PR_BODY" \
               || true 
           done
