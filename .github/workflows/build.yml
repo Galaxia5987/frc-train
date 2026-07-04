@@ -42,3 +42,8 @@ jobs:
 
       - name: Check formatting
         run: ./gradlew spotlessCheck
+  trigger-auto-close:
+    needs: build
+    uses: ./.github/workflows/close-pr.yml 
+    with:
+      pr_number: ${{ github.event.pull_request.number }}

@@ -1,0 +1,14 @@
+name: Trigger on Review
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  evaluate-review:
+    uses: ./.github/workflows/close-pr.yml
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
