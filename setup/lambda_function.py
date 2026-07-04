@@ -17,10 +17,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         "workflow_name": "init_fork.yml",
     }
     """
-    logger.info("Received event: %s", json.dumps(event))
-
-    repo = event.get("repo")
-    github_token = event.get("token")
+    body = json.loads(event.get("body", "{}"))
+    repo = body.get("repo")
+    github_token = body.get("token")
 
     if not github_token:
         return build_response(400, {"error": "Missing mandatory fields: 'token' is required."})
@@ -36,7 +35,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         gh_manager.set_secret(secret_name="USER_PAT", secret_value=github_token)
 
-        gh_manager.dispatch_workflow(workflow_name=event.get("workflow_name", "init_fork.yml"), branch="main")
+        gh_manager.dispatch_workflow(workflow_name=body.get("workflow_name", "init_fork.yml"), branch="main")
         
         return build_response(200, {"message": "Execution completed successfully."})
 
