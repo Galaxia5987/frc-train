@@ -64,6 +64,7 @@ jobs:
             fi
             
             gh pr create \
+              --repo ${{ github.repository }} \
               --base tasks/main \
               --head "$clean_branch_name" \
               --title "Task $clean_branch_name" \
