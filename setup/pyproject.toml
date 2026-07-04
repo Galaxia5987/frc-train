@@ -1,0 +1,10 @@
+[project]
+name = "setup-frc-train"
+version = "0.1.0"
+description = "Setup scripts for frc-train"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+"requests",
+"pynacl"
+]
