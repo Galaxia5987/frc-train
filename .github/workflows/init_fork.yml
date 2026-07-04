@@ -1,0 +1,59 @@
+name: Initialize Fork
+on: 
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  setup-fork:
+    runs-on: ubuntu-latest
+    env:
+      PARENT_REPO: "Galaxia5987/frc-train"
+      
+    steps:
+      - name: Exit if Parent Repo
+        if: github.repository == env.PARENT_REPO
+        run: |
+            echo "Error: This is the parent repository. Stopping workflow."
+            exit 1
+        
+      - name: Checkout child repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync branches from parent
+        run: |
+          git remote add parent https://github.com/${{ env.PARENT_REPO }}.git
+          git fetch parent
+
+          for branch in $(git branch -r | grep 'parent/' | grep -v 'parent/main' | grep -v 'HEAD'); do
+            clean_branch_name=${branch#parent/}
+            
+            echo "Processing branch: $clean_branch_name"
+            
+            git checkout -b "$clean_branch_name" "$branch"
+            
+            git push origin "$clean_branch_name"
+          done
+
+      - name: Open Pull Requests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git checkout main
+          
+          for branch in $(git branch -r | grep 'origin/' | grep -v 'origin/main' | grep -v 'HEAD'); do
+            clean_branch_name=${branch#origin/}
+            
+            echo "Creating PR for: $clean_branch_name"
+            
+            gh pr create \
+              --base main \
+              --head "$clean_branch_name" \
+              --title "Task $clean_branch_name" \
+              --body "This PR was automatically generated for $clean_branch_name." \
+              || true 
+          done
