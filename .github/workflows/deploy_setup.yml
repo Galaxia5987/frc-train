@@ -1,0 +1,53 @@
+name: Deploy Setup Lambda on AWS
+
+on:
+  push:
+    branches: 
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for OIDC authentication
+      contents: read  # Required to check out the repository
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          
+      - name: Build Deployment Package
+        run: |
+          cd setup
+          mkdir -p setup
+          
+          uv pip compile pyproject.toml -o requirements.txt
+          
+          uv pip install --system \
+            --target ./setup \
+            --python-platform manylinux2014_x86_64 \
+            --python-version 3.12 \
+            -r requirements.txt
+            
+          cp *.py ./setup/
+          
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: eu-north-1
+      
+      - name: Deploy Lambda Function
+        run: |
+          cd setup/setup
+          zip -r ../function.zip .
+          cd ..
+          
+          aws lambda update-function-code \
+            --function-name frc-train-setup \
+            --zip-file fileb://function.zip
