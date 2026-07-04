@@ -119,7 +119,7 @@ class GitHubActionsManager:
             response = self.session.post(url, json={"ref": branch})
             response.raise_for_status()
             
-            if response.status_code == 204:
+            if response.status_code == 200:
                 self.logger.info("Successfully dispatched the workflow.")
             else:
                 raise GitHubAPIError(f"Unexpected status code {response.status_code} while dispatching workflow.")
