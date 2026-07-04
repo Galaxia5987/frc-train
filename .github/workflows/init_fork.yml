@@ -4,8 +4,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
-  actions: write
 
 jobs:
   setup-fork:
@@ -26,23 +24,27 @@ jobs:
           fetch-depth: 0
 
       - name: Sync branches from parent
+        env:
+            GH_TOKEN: ${{ secrets.USER_PAT }}
         run: |
-          git remote add parent https://github.com/${{ env.PARENT_REPO }}.git
-          git fetch parent
+            git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
 
-          for branch in $(git branch -r | grep 'parent/' | grep -v 'parent/main' | grep -v 'HEAD'); do
+            git remote add parent "https://github.com/${{ env.PARENT_REPO }}.git"
+            git fetch parent
+
+            for branch in $(git branch -r | grep 'parent/' | grep -v 'parent/main' | grep -v 'HEAD'); do
             clean_branch_name=${branch#parent/}
             
             echo "Processing branch: $clean_branch_name"
             
-            git checkout -b "$clean_branch_name" "$branch"
+            git checkout -B "$clean_branch_name" "$branch"
             
             git push origin "$clean_branch_name"
-          done
+            done
 
       - name: Open Pull Requests
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.USER_PAT }}
         run: |
           git checkout main
           
