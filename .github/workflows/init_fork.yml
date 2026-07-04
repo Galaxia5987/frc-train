@@ -49,7 +49,7 @@ jobs:
         run: |
           git checkout main
           
-          for branch in $(git branch -r | grep 'origin/' | grep -v 'origin/main' | grep -v 'HEAD'); do
+          for branch in $(git branch -r | grep 'origin/' | grep -v 'main' | grep -v 'HEAD'); do
             # branch contains "origin/branch-name", so we strip the whitespace and "origin/"
             # to get just the branch name
             clean_branch_name=$(echo "$branch" | sed 's/^[[:space:]]*origin\///')
@@ -71,3 +71,23 @@ jobs:
               --body "$PR_BODY" \
               || true 
           done
+
+      - name: Apply Branch Protection to Main
+        env:
+          GH_TOKEN: ${{ secrets.USER_PAT }} 
+        run: |
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            /repos/${{github.repository}}/branches/tasks/main/protection \
+            --input - <<< '{
+            "required_status_checks": null,
+            "required_pull_request_reviews": {},
+            "allow_force_pushes": true,
+            "allow_deletions": true,
+            "allow_fork_syncing": true,
+            "enforce_admins": false,
+            "restrictions": null,
+            "lock_branch": true
+          }'
