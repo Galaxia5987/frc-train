@@ -1,40 +1,26 @@
-name: Close PR
+name: Close PR Reusable
 on:
-  pull_request_review:
-    types: [submitted]
-  workflow_run:
-    workflows: ["Build, tests, formatting"]
-    types: [completed]
-
-permissions:
-  pull-requests: write
-  contents: read
+  workflow_call:
+    inputs:
+      pr_number:
+        description: 'The PR number to evaluate'
+        required: true
+        type: string
 
 jobs:
   close-if-approve:
     runs-on: ubuntu-latest
-    env:
-      PARENT_REPO: "Galaxia5987/frc-train"
-      
+    # Cleanly skips the job if running in the parent repository
+    if: github.repository != 'Galaxia5987/frc-train'
+    
     steps:
-      - name: Exit if Parent Repo
-        if: github.repository == env.PARENT_REPO
-        run: |
-            echo "Error: This is the parent repository. Stopping workflow."
-            exit 1
-            
       - name: Evaluate and Close PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr_number }}
         run: |
-          if [ "${{ github.event_name }}" == "pull_request_review" ]; then
-            PR_NUMBER="${{ github.event.pull_request.number }}"
-          elif [ "${{ github.event_name }}" == "workflow_run" ]; then
-            PR_NUMBER="${{ github.event.workflow_run.pull_requests && github.event.workflow_run.pull_requests[0].number || '' }}"
-          fi
-
           if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" == "null" ]; then
-            echo "Could not determine PR number. Skipping."
+            echo "No PR number provided. Skipping."
             exit 0
           fi
 
@@ -75,7 +61,6 @@ jobs:
               fi
             fi
 
-            # If neither condition is met, exit the script.
             if [ "$MUTUAL_CONNECTION" = false ]; then
               echo "No mutual connection found between $APPROVER and $REPO_OWNER. Exiting."
               exit 0
@@ -86,7 +71,6 @@ jobs:
 
           echo "Connection verified! Checking CI status..."
 
-          # 4. Check CI Status and Close
           if gh pr checks $PR_NUMBER -R ${{ github.repository }}; then
             echo "All checks are passing! Closing the PR without merging."
             
