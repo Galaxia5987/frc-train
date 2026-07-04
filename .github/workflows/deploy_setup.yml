@@ -40,7 +40,6 @@ jobs:
           uv pip install --system \
             --target ./setup \
             --python-platform manylinux2014_x86_64 \
-            --python-version 3.12 \
             -r requirements.txt
             
           cp *.py ./setup/
