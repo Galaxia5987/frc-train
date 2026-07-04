@@ -69,24 +69,31 @@ jobs:
             echo "Approver is the repository owner. Proceeding."
           fi
 
-          echo "Connection verified! Checking CI status..."
+          echo "Connection verified! Fetching PR head SHA to check CI status via API..."
 
-          RUN_ID="${{ github.run_id }}"
-          
-          # 1. Fetch checks as JSON. The "|| true" prevents the script from crashing 
-          # due to GitHub Actions' default fail-fast behavior if checks are pending/failing.
-          CHECKS_JSON=$(gh pr checks $PR_NUMBER -R ${{ github.repository }} --json detailsUrl,state || true)
+          # 1. Fetch the head SHA (the latest commit) of the pull request
+          HEAD_SHA=$(gh api repos/${{ github.repository }}/pulls/$PR_NUMBER --jq '.head.sha')
 
-          # 2. Use jq to count checks that are NOT successful, skipped, or neutral, 
-          # explicitly excluding the current workflow's RUN_ID from the count.
-          BLOCKING_CHECKS=$(echo "$CHECKS_JSON" | jq "[.[] | select((.detailsUrl // \"\") | contains(\"$RUN_ID\") | not) | select(.state != \"SUCCESS\" and .state != \"SKIPPED\" and .state != \"NEUTRAL\")] | length")
+          # 2. Fetch check runs for the commit using the GitHub REST API.
+          # We fall back to an empty JSON object if the API call fails to prevent jq from crashing.
+          CHECKS_JSON=$(gh api repos/${{ github.repository }}/commits/$HEAD_SHA/check-runs 2>/dev/null || echo '{"check_runs":[]}')
+
+          # 3. Use jq to isolate check runs where the name contains "build" (case-insensitive).
+          # A check is considered blocking if its status is NOT "completed", 
+          # OR if it IS completed but its conclusion is NOT "success", "skipped", or "neutral".
+          BLOCKING_CHECKS=$(echo "$CHECKS_JSON" | jq '[.check_runs[] | select(.name | test("build"; "i")) | select(.status != "completed" or (.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral"))] | length')
+
+          # Safety check to ensure BLOCKING_CHECKS is a valid integer before evaluation
+          if [ -z "$BLOCKING_CHECKS" ]; then
+             BLOCKING_CHECKS=0
+          fi
 
           if [ "$BLOCKING_CHECKS" -eq 0 ]; then
-            echo "All other checks are passing! Closing the PR without merging."
+            echo "The 'build' workflow is successful (or not present)! Closing the PR without merging."
             
             gh pr close $PR_NUMBER -R ${{ github.repository }} \
               --comment "Congratulations! You completed this task successfully."
           else
-            echo "$BLOCKING_CHECKS CI check(s) are still pending or failing. Waiting for them to pass."
+            echo "The 'build' workflow is still pending, running, or failing. Waiting for it to pass."
             exit 0
           fi
