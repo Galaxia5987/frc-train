@@ -22,8 +22,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     repo = event.get("repo")
     github_token = event.get("token")
 
-    if not repo or not github_token:
-        return build_response(400, {"error": "Missing mandatory fields: 'repo', and 'token' are required."})
+    if not github_token:
+        return build_response(400, {"error": "Missing mandatory fields: 'token' is required."})
 
     try:
         gh_manager = GitHubActionsManager(logger=logger, token=github_token, repo=repo)

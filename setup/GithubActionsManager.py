@@ -14,7 +14,7 @@ class GitHubAPIError(Exception):
 class GitHubActionsManager:
     """Manages GitHub API interactions for workflows and repository secrets."""
 
-    def __init__(self, logger: logging.Logger, token: str, repo: str, api_version: str = "2026-03-10") -> None:
+    def __init__(self, logger: logging.Logger, token: str, repo: str | None, api_version: str = "2026-03-10") -> None:
         self.logger = logger
         self.repo = repo
         self.base_url = f"https://api.github.com/repos/{repo}"
@@ -26,6 +26,16 @@ class GitHubActionsManager:
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": api_version
         })
+        
+        if not repo:
+            self.repo = f"{self.fetch_user_info()}/frc-learn"
+            
+            
+    def fetch_user_info(self):
+        response = self.session.get("https://api.github.com/user")
+        response.raise_for_status()
+        return response.json().get('login')
+            
 
     @staticmethod
     def encrypt_secret(public_key: str, secret_value: str) -> str:
