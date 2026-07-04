@@ -71,12 +71,22 @@ jobs:
 
           echo "Connection verified! Checking CI status..."
 
-          if gh pr checks $PR_NUMBER -R ${{ github.repository }}; then
-            echo "All checks are passing! Closing the PR without merging."
+          RUN_ID="${{ github.run_id }}"
+          
+          # 1. Fetch checks as JSON. The "|| true" prevents the script from crashing 
+          # due to GitHub Actions' default fail-fast behavior if checks are pending/failing.
+          CHECKS_JSON=$(gh pr checks $PR_NUMBER -R ${{ github.repository }} --json detailsUrl,state || true)
+
+          # 2. Use jq to count checks that are NOT successful, skipped, or neutral, 
+          # explicitly excluding the current workflow's RUN_ID from the count.
+          BLOCKING_CHECKS=$(echo "$CHECKS_JSON" | jq "[.[] | select((.detailsUrl // \"\") | contains(\"$RUN_ID\") | not) | select(.state != \"SUCCESS\" and .state != \"SKIPPED\" and .state != \"NEUTRAL\")] | length")
+
+          if [ "$BLOCKING_CHECKS" -eq 0 ]; then
+            echo "All other checks are passing! Closing the PR without merging."
             
             gh pr close $PR_NUMBER -R ${{ github.repository }} \
               --comment "Congratulations! You completed this task successfully."
           else
-            echo "CI checks are still pending or failing. Waiting for them to pass."
+            echo "$BLOCKING_CHECKS CI check(s) are still pending or failing. Waiting for them to pass."
             exit 0
           fi
