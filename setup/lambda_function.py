@@ -3,7 +3,7 @@ import json
 import logging
 from typing import Any, Dict
 
-from setup.GithubActionsManager import GitHubAPIError, GitHubActionsManager
+from GithubActionsManager import GitHubAPIError, GitHubActionsManager
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
