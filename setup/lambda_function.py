@@ -56,7 +56,10 @@ def build_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
         "isBase64Encoded": False,
         "statusCode": status_code,
         "headers": {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            'Access-Control-Allow-Origin': 'https://galaxia5987.github.io',
+            'Access-Control-Allow-Methods': 'POST',
+            'Access-Control-Allow-Headers': 'Content-Type'
         },
         "body": json.dumps(body)
     }
