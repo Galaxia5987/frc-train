@@ -1,0 +1,27 @@
+{
+  "name": "frc-train-setup",
+  "version": "1.0.0",
+  "description": "A collection of interactive practice tasks for FRC",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Galaxia5987/frc-train.git"
+  },
+  "author": "AdarWa",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/Galaxia5987/frc-train/issues"
+  },
+  "homepage": "https://github.com/Galaxia5987/frc-train#readme",
+  "dependencies": {
+    "axios": "^1.18.1",
+    "libsodium-wrappers": "^0.8.4"
+  },
+  "devDependencies": {
+    "webpack": "^5.108.4",
+    "webpack-cli": "^7.2.1"
+  }
+}
