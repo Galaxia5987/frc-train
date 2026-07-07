@@ -12,7 +12,7 @@
   },
   "license": "GPL-3.0",
   "author": "AdarWa",
-  "type": "module",
+  "type": "commonjs",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
