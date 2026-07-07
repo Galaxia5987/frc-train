@@ -16,11 +16,10 @@ jobs:
 
       - name: Check if new commits were made
         run: |
-          # Fail if the latest commit was authored by the GitHub Actions bot
-          AUTHOR=$(git log -1 --pretty=format:'%an')
-          echo $AUTHOR
-          if [[ "$AUTHOR" == *"github-actions"* || "$AUTHOR" == *"GitHub Actions"* ]]; then
-            echo "Error: The last commit is from GitHub Actions."
+          # Fail the step if the latest commit message begins with "Initialize task"
+          COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')
+          if [[ "$COMMIT_MESSAGE" == "Initialize task"* ]]; then
+            echo "Error: The last commit message starts with 'Initialize task'."
             exit 1
           fi
 
