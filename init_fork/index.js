@@ -1,61 +1,33 @@
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+const { initializeTaskBranches } = require('./branch-manager');
+const { createPullRequests } = require('./pr-manager');
+const { protectMainBranch } = require("./branch-protection")
 
-const language = process.env.LANGUAGE || process.argv[2];
+function main() {
+    const language = process.env.LANGUAGE || process.argv[2];
+    const githubRepo = process.env.GITHUB_REPOSITORY;
 
-if (!language) {
-    console.error('Error: Please specify a language (e.g., node init-tasks.js kotlin)');
-    process.exit(1);
-}
-
-const repoRoot = process.cwd();
-const tasksDir = path.join(repoRoot, 'tasks');
-
-if (!fs.existsSync(tasksDir)) {
-    console.error(`Error: Tasks directory not found at ${tasksDir}`);
-    process.exit(1);
-}
-
-const backupDir = path.join(repoRoot, '..', 'tasks_backup_temp');
-fs.cpSync(tasksDir, backupDir, { recursive: true });
-
-const tasks = fs.readdirSync(backupDir, { withFileTypes: true })
-    .filter(dirent => dirent.isDirectory())
-    .map(dirent => dirent.name);
-
-for (const task of tasks) {
-    const langSourcePath = path.join(backupDir, task, language);
-    
-    if (fs.existsSync(langSourcePath) && fs.statSync(langSourcePath).isDirectory()) {
-        const branchName = `tasks/${task}`;
-        console.log(`\n Processing: ${task} (${language}) -> Branch: ${branchName}`);
-        
-        try {
-            // Create a fresh orphan branch with no history
-            execSync(`git checkout --orphan ${branchName}`, { stdio: 'ignore' });
-            
-            // Clear all tracked files and working tree artifacts
-            execSync('git rm -rf .', { stdio: 'ignore' });
-            execSync('git clean -fdx', { stdio: 'ignore' });
-            
-            // Copy only the language-specific files to the root of the repo
-            fs.cpSync(langSourcePath, repoRoot, { recursive: true });
-            
-            // Add, commit, and push
-            execSync('git add .', { stdio: 'ignore' });
-            execSync(`git commit -m "Initialize task: ${task} for ${language}"`, { stdio: 'inherit' });
-            execSync(`git push origin ${branchName} --force`, { stdio: 'inherit' });
-            
-            console.log(`Successfully pushed ${branchName}`);
-        } catch (error) {
-            console.error(`Failed to process ${task}:`, error.message);
-        }
-    } else {
-        console.log(`\nSkipping ${task}: No '${language}' directory found.`);
+    if (!language) {
+        console.error('Error: Please specify a language (e.g., node index.js kotlin)');
+        process.exit(1);
     }
+
+    if (!githubRepo) {
+        console.error('Error: GITHUB_REPOSITORY environment variable is missing.');
+        process.exit(1);
+    }
+
+    const repoRoot = process.cwd();
+
+    console.log('Initializing Task Branches...');
+    initializeTaskBranches(repoRoot, language);
+
+    console.log('Creating Pull Requests...');
+    createPullRequests(githubRepo);
+
+    console.log('Setting up branch protection rules...')
+    protectMainBranch(githubRepo);
+
+    console.log('\nFork initialization and PR creation complete.');
 }
 
-// Cleanup the external backup
-fs.rmSync(backupDir, { recursive: true, force: true });
-console.log('\nFork initialization complete.');
+main();
