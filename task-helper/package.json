@@ -1,0 +1,24 @@
+{
+  "name": "task-helper-frc-train",
+  "version": "1.0.0",
+  "description": "A utility to create tasks",
+  "type":"module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Galaxia5987/frc-train.git"
+  },
+  "author": "AdarWa",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/Galaxia5987/frc-train/issues"
+  },
+  "homepage": "https://github.com/Galaxia5987/frc-train#readme",
+  "dependencies": {
+    "inquirer": "^14.0.2"
+  }
+}
