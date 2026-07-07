@@ -1,0 +1,20 @@
+{
+  "name": "init-fork-frc-train",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/Galaxia5987/frc-train#readme",
+  "bugs": {
+    "url": "https://github.com/Galaxia5987/frc-train/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Galaxia5987/frc-train.git"
+  },
+  "license": "GPL-3.0",
+  "author": "AdarWa",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
