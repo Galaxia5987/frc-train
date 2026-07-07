@@ -1,6 +1,12 @@
 name: Initialize Fork
+
 on: 
   workflow_dispatch:
+    inputs:
+      language:
+        description: 'Language to initialize (e.g., kotlin, java)'
+        required: true
+        default: 'kotlin'
 
 permissions:
   contents: write
@@ -24,70 +30,22 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Sync branches from parent
-        env:
-            GH_TOKEN: ${{ secrets.USER_PAT }}
-        run: |
-            git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-            git remote add parent "https://github.com/${{ env.PARENT_REPO }}.git"
-            git fetch parent
-
-            for branch in $(git branch -r | grep 'parent/' | grep -v 'parent/main' | grep -v 'HEAD'); do
-            clean_branch_name=${branch#parent/}
-            
-            echo "Processing branch: $clean_branch_name"
-            
-            git checkout -B "$clean_branch_name" "$branch"
-            
-            git push origin "$clean_branch_name"
-            done
-
-      - name: Open Pull Requests
+      - name: Configure Git
         env:
           GH_TOKEN: ${{ secrets.USER_PAT }}
         run: |
-          git checkout main
-          
-          for branch in $(git branch -r | grep 'origin/' | grep -v 'main' | grep -v 'HEAD'); do
-            # branch contains "origin/branch-name", so we strip the whitespace and "origin/"
-            # to get just the branch name
-            clean_branch_name=$(echo "$branch" | sed 's/^[[:space:]]*origin\///')
-            
-            echo "Creating PR for: $clean_branch_name"
-            
-            # Check if TASK.md exists on the target branch and extract its content
-            if git show "origin/$clean_branch_name:TASK.md" >/dev/null 2>&1; then
-              PR_BODY=$(git show "origin/$clean_branch_name:TASK.md")
-            else
-              PR_BODY="This PR was automatically generated for $clean_branch_name."
-            fi
-            
-            gh pr create \
-              --repo ${{ github.repository }} \
-              --base tasks/main \
-              --head "$clean_branch_name" \
-              --title "Incomplete Task $clean_branch_name" \
-              --body "$PR_BODY" \
-              || true 
-          done
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Apply Branch Protection to Main
+      - name: Run Task Initialization & PR Creation
         env:
-          GH_TOKEN: ${{ secrets.USER_PAT }} 
-        run: |
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2026-03-10" \
-            /repos/${{github.repository}}/branches/tasks/main/protection \
-            --input - <<< '{
-            "required_status_checks": null,
-            "required_pull_request_reviews": {},
-            "allow_force_pushes": true,
-            "allow_deletions": true,
-            "allow_fork_syncing": true,
-            "enforce_admins": false,
-            "restrictions": null,
-            "lock_branch": true
-          }'
+          LANGUAGE: ${{ github.event.inputs.language }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.USER_PAT }}
+        run: node init_fork/index.js
