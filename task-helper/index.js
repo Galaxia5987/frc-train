@@ -3,6 +3,7 @@ import path from 'node:path';
 import inquirer from 'inquirer';
 
 const TASKS_DIR = path.join(process.cwd(), '../tasks');
+const SOLUTIONS_DIR = path.join(process.cwd(), '../solutions');
 const MAIN_DIR = path.join(TASKS_DIR, 'main');
 
 async function runWizard() {
@@ -72,6 +73,9 @@ async function runWizard() {
     }\n`;
     fs.writeFileSync(taskMdPath, mdContent);
   }
+
+  const targetSolutionDir = path.join(SOLUTIONS_DIR, taskName, language);
+  fs.mkdirSync(targetSolutionDir, { recursive: true });
 
   console.log(`\nTask '${taskName}' created successfully in tasks/${taskName}/${language}!`);
 }
