@@ -10,6 +10,7 @@ Options:
   -t, --token <type>     GitHub Personal Access Token (PAT) (Required)
   -r, --repo <type>      Repository name in 'owner/repo' format (Optional)
   -w, --workflow <type>  Workflow filename (Optional, default: "init_fork.yml")
+  -l --language <type>   Language for the fork(e.g., kotlin, java)
   -h, --help             Display this help message
 `);
 }
