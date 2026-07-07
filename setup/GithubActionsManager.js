@@ -114,12 +114,12 @@ class GitHubActionsManager {
         }
     }
 
-    async dispatchWorkflow(workflowName, branch) {
+    async dispatchWorkflow(workflowName, branch, languageType) {
         const url = `${this.baseUrl}/actions/workflows/${workflowName}/dispatches`;
         console.log(`Dispatching workflow '${workflowName}' on branch '${branch}'...`);
         
         try {
-            const response = await this.client.post(url, { ref: branch });
+            const response = await this.client.post(url, { ref: branch, inputs: { language: languageType } });
             
             if (response.status === 200 || response.status === 204) {
                 console.log("Successfully dispatched the workflow.");

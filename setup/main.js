@@ -17,7 +17,8 @@ Options:
 function parseArguments() {
     const rawArgs = process.argv.slice(2);
     const args = {
-        workflow: "init_fork.yml" // Default value
+        workflow: "init_fork.yml",
+        language: "kotlin"
     };
 
     for (let i = 0; i < rawArgs.length; i++) {
@@ -36,6 +37,9 @@ function parseArguments() {
             case '--workflow':
                 args.workflow = rawArgs[++i];
                 break;
+            case '-l':
+            case '--language':
+                args.language = rawArgs[++i];
             case '-h':
             case '--help':
                 printHelp();
@@ -63,7 +67,7 @@ async function main() {
         await manager.init();
         await manager.enableRepoActions();
         await manager.setSecret("USER_PAT", args.token);
-        await manager.dispatchWorkflow(args.workflow, "main");
+        await manager.dispatchWorkflow(args.workflow, "main", args.language);
             
         console.log("GitHub Action setup and dispatch completed successfully.");
 
