@@ -15,7 +15,13 @@ function initializeTaskBranches(repoRoot, language) {
     try {
         const tasks = fs.readdirSync(backupDir, { withFileTypes: true })
             .filter(dirent => dirent.isDirectory())
-            .map(dirent => dirent.name);
+            .map(dirent => dirent.name)
+            // Force 'main' to be processed first so other branches can use it as a base
+            .sort((a, b) => {
+                if (a === 'main') return -1;
+                if (b === 'main') return 1;
+                return a.localeCompare(b);
+            });
 
         for (const task of tasks) {
             const langSourcePath = path.join(backupDir, task, language);
@@ -25,17 +31,21 @@ function initializeTaskBranches(repoRoot, language) {
                 console.log(`\nProcessing: ${task} (${language}) -> Branch: ${branchName}`);
                 
                 try {
-                    // Create a fresh orphan branch with no history
-                    runCommand(`git checkout --orphan ${branchName}`, { stdio: 'ignore' });
+                    if (task === 'main') {
+                        // The main task branch is the root, so it starts fresh
+                        runCommand(`git checkout --orphan ${branchName}`, { stdio: 'ignore' });
+                    } else {
+                        // Subsequent tasks branch off tasks/main to establish shared commit history
+                        runCommand('git checkout tasks/main', { stdio: 'ignore' });
+                        runCommand(`git checkout -b ${branchName}`, { stdio: 'ignore' });
+                    }
                     
-                    // Clear all tracked files and working tree artifacts
+                    // Clear existing tracked files in the index to prepare for the new task state
                     runCommand('git rm -rf .', { stdio: 'ignore' });
                     runCommand('git clean -fdx', { stdio: 'ignore' });
                     
-                    // Copy only the language-specific files to the root of the repo
                     fs.cpSync(langSourcePath, repoRoot, { recursive: true });
                     
-                    // Add, commit, and push
                     runCommand('git add .', { stdio: 'ignore' });
                     runCommand(`git commit -m "Initialize task: ${task} for ${language}"`);
                     runCommand(`git push origin ${branchName} --force`);
