@@ -1,0 +1,61 @@
+# Adapted from WPILib docs: https://docs.wpilib.org/en/stable/docs/software/advanced-gradlerio/robot-code-ci.html
+
+name: Build, tests, formatting
+
+# Controls when the action will run. Triggers the workflow on pull request events.
+on:
+  pull_request:
+    branches: [ "tasks/main"]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  fail-on-no-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Check if new commits were made
+        run: |
+          AUTHOR=$(git log -1 --pretty=format:'%an')
+          if [[ "$AUTHOR" == *"github-actions"* || "$AUTHOR" == *"GitHub Actions"* ]]; then
+            echo "Error: The last commit is from GitHub Actions."
+            exit 1
+          fi
+
+  build:
+    needs: fail-on-no-commits
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Grab the WPILib docker container
+    container: wpilib/roborio-cross-ubuntu:2025-22.04
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Check-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      # Declare the repository safe and not under dubious ownership.
+      - name: Add repository to git safe directories
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
+      # Grant execute permission for gradlew
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Setup Gradle and caching
+        uses: gradle/actions/setup-gradle@v6
+
+      # Run Gradle commands
+      - name: Check that the code builds
+        run: ./gradlew compileKotlin compileJava
+
+      - name: Run tests
+        run: ./gradlew test
+  trigger-auto-close:
+    needs: build
+    uses: ./.github/workflows/close_pr.yml 
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
