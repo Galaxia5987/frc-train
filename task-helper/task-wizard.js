@@ -36,7 +36,7 @@ async function runWizard() {
     {
       type: 'checkbox',
       name: 'dependencies',
-      message: 'Select dependencies to merge (space to select, enter to confirm):',
+      message: 'Select dependencies (space to select, enter to confirm):',
       choices: availableTasks,
       when: availableTasks.length > 0
     }
@@ -48,16 +48,6 @@ async function runWizard() {
   const mainLangDir = path.join(MAIN_DIR, language);
 
   fs.mkdirSync(targetLangDir, { recursive: true });
-
-  for (const dep of dependencies) {
-    const depLangDir = path.join(TASKS_DIR, dep, language);
-    if (fs.existsSync(depLangDir)) {
-      console.log(`Merging dependency: ${dep}...`);
-      fs.cpSync(depLangDir, targetLangDir, { recursive: true, force: true });
-    } else {
-      console.warn(`Warning: Dependency '${dep}' does not have a '${language}' folder.`);
-    }
-  }
 
   if (fs.existsSync(mainLangDir)) {
      console.log('Applying main template...');

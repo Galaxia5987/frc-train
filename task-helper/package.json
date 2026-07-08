@@ -6,8 +6,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "task-wizard": "node task-wizard.js",
-    "merge": "node merge-main.js"
+    "create-task": "node task-wizard.js",
+    "merge-main": "node merge-main.js",
+    "resolve-dependency": "node task-dependency-resolver.js"
   },
   "repository": {
     "type": "git",
