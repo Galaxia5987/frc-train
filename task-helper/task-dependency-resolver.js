@@ -15,6 +15,8 @@ function getDependencies(taskPath) {
   if (parts.length < 2) return [];
 
   const depsSection = parts[1];
+
+  if (depsSection.trim() === "None") return [];
   
   return depsSection
     .split('\n')
