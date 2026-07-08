@@ -23,4 +23,8 @@ object Intake : SubsystemBase() {
     fun intake(): Command = setVoltage(INTAKE_VOLTAGE)
     fun outtake(): Command = setVoltage(OUTTAKE_VOLTAGE)
     fun stop(): Command = setVoltage(0.0.volts)
+
+    override fun periodic(){
+        motor.periodic()
+    }
 }
