@@ -1,0 +1,99 @@
+name: Close PR Reusable
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        description: 'The PR number to evaluate'
+        required: true
+        type: string
+
+jobs:
+  close-if-approve:
+    runs-on: ubuntu-latest
+    # Cleanly skips the job if running in the parent repository
+    if: github.repository != 'Galaxia5987/frc-train'
+    
+    steps:
+      - name: Evaluate and Close PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" == "null" ]; then
+            echo "No PR number provided. Skipping."
+            exit 0
+          fi
+
+          echo "Checking PR #$PR_NUMBER..."
+
+          APPROVER=$(gh api repos/${{ github.repository }}/pulls/$PR_NUMBER/reviews --jq '.[] | select(.state=="APPROVED") | .user.login' | head -n 1)
+
+          if [ -z "$APPROVER" ]; then
+            echo "PR #$PR_NUMBER does not have an 'APPROVED' review yet. Exiting."
+            exit 0
+          fi
+
+          REPO_OWNER="${{ github.repository_owner }}"
+          echo "Approval found from: $APPROVER"
+
+          if [ "$APPROVER" != "$REPO_OWNER" ]; then
+            echo "Checking for mutual connection between $APPROVER and $REPO_OWNER..."
+            MUTUAL_CONNECTION=false
+
+            if gh api /users/$REPO_OWNER/following/$APPROVER --silent 2>/dev/null && \
+               gh api /users/$APPROVER/following/$REPO_OWNER --silent 2>/dev/null; then
+              echo "Mutual follow detected."
+              MUTUAL_CONNECTION=true
+            else
+              OWNER_ORGS=$(gh api users/$REPO_OWNER/orgs --jq '.[].login')
+              APPROVER_ORGS=$(gh api users/$APPROVER/orgs --jq '.[].login')
+              
+              SHARED_ORGS=""
+              for org in $OWNER_ORGS; do
+                if echo "$APPROVER_ORGS" | grep -w -q "$org"; then
+                  SHARED_ORGS="$SHARED_ORGS $org"
+                fi
+              done
+
+              if [ -n "$SHARED_ORGS" ]; then
+                echo "Shared organization(s) detected:$SHARED_ORGS"
+                MUTUAL_CONNECTION=true
+              fi
+            fi
+
+            if [ "$MUTUAL_CONNECTION" = false ]; then
+              echo "No mutual connection found between $APPROVER and $REPO_OWNER. Exiting."
+              exit 0
+            fi
+          else
+            echo "Approver is the repository owner. Proceeding."
+          fi
+
+          echo "Connection verified! Fetching PR head SHA to check CI status via API..."
+
+          # 1. Fetch the head SHA (the latest commit) of the pull request
+          HEAD_SHA=$(gh api repos/${{ github.repository }}/pulls/$PR_NUMBER --jq '.head.sha')
+
+          # 2. Fetch check runs for the commit using the GitHub REST API.
+          # We fall back to an empty JSON object if the API call fails to prevent jq from crashing.
+          CHECKS_JSON=$(gh api repos/${{ github.repository }}/commits/$HEAD_SHA/check-runs 2>/dev/null || echo '{"check_runs":[]}')
+
+          # 3. Use jq to isolate check runs where the name contains "build" (case-insensitive).
+          # A check is considered blocking if its status is NOT "completed", 
+          # OR if it IS completed but its conclusion is NOT "success", "skipped", or "neutral".
+          BLOCKING_CHECKS=$(echo "$CHECKS_JSON" | jq '[.check_runs[] | select(.name | test("build"; "i")) | select(.status != "completed" or (.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral"))] | length')
+
+          # Safety check to ensure BLOCKING_CHECKS is a valid integer before evaluation
+          if [ -z "$BLOCKING_CHECKS" ]; then
+             BLOCKING_CHECKS=0
+          fi
+
+          if [ "$BLOCKING_CHECKS" -eq 0 ]; then
+            echo "The 'build' workflow is successful (or not present)! Closing the PR without merging."
+            gh pr edit $PR_NUMBER -R ${{github.repository}} --title "Task Completed"
+            gh pr close $PR_NUMBER -R ${{ github.repository }} \
+              --comment "Congratulations! You completed this task successfully."
+          else
+            echo "The 'build' workflow is still pending, running, or failing. Waiting for it to pass."
+            exit 0
+          fi
