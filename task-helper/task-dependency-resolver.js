@@ -2,8 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import inquirer from 'inquirer';
 
-const TASKS_DIR = path.join(process.cwd(), 'tasks');
-const SOLUTIONS_DIR = path.join(process.cwd(), 'solutions');
+const TASKS_DIR = path.join(process.cwd(), '../tasks');
+const SOLUTIONS_DIR = path.join(process.cwd(), '../solutions');
+const MAIN_DIR = path.join(TASKS_DIR, 'main');
 
 function getDependencies(taskPath) {
   const mdPath = path.join(taskPath, 'TASK.md');
@@ -20,11 +21,30 @@ function getDependencies(taskPath) {
   
   return depsSection
     .split('\n')
-    .map(line => line.trim());
+    .filter(line => line.trim().startsWith('- '))
+    .map(line => line.trim().substring(2).trim());
 }
+
+// Filter function to skip TASK.md
+const ignoreTaskMdFilter = (src, dest) => {
+  return path.basename(src) !== 'TASK.md';
+};
 
 async function runWizard() {
   console.log('Dependency Injection Wizard\n');
+
+  const languages = fs.existsSync(MAIN_DIR)
+    ? fs.readdirSync(MAIN_DIR).filter(file => fs.statSync(path.join(MAIN_DIR, file)).isDirectory())
+    : ['java', 'kotlin'];
+
+  const {lang} = await inquirer.prompt([
+      {
+      type: 'select',
+      name: 'lang',
+      message: 'Select Language:',
+      choices: languages
+    }
+  ]);
 
   // Locate all valid task directories excluding the main template
   const allTasks = fs.readdirSync(TASKS_DIR).filter(file => {
@@ -33,9 +53,8 @@ async function runWizard() {
   });
 
   const tasksWithDeps = [];
-
   for (const task of allTasks) {
-    const taskPath = path.join(TASKS_DIR, task);
+    const taskPath = path.join(TASKS_DIR, task, lang);
     const deps = getDependencies(taskPath);
     if (deps.length > 0) {
       tasksWithDeps.push({ task, deps });
@@ -81,13 +100,21 @@ async function runWizard() {
         const depTaskDir = path.join(TASKS_DIR, dep, language);
         if (fs.existsSync(depTaskDir)) {
           console.log(`Injecting base task: ${dep}/${language} into ${task}/${language}`);
-          fs.cpSync(depTaskDir, targetLangDir, { recursive: true, force: true });
+          fs.cpSync(depTaskDir, targetLangDir, { 
+            recursive: true, 
+            force: true, 
+            filter: ignoreTaskMdFilter
+          });
         }
 
         const depSolutionDir = path.join(SOLUTIONS_DIR, dep, language);
         if (fs.existsSync(depSolutionDir)) {
           console.log(`Injecting solution: ${dep}/${language} into ${task}/${language}`);
-          fs.cpSync(depSolutionDir, targetLangDir, { recursive: true, force: true });
+          fs.cpSync(depSolutionDir, targetLangDir, { 
+            recursive: true, 
+            force: true, 
+            filter: ignoreTaskMdFilter
+          });
         }
       }
     }
